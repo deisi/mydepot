@@ -1,0 +1,12 @@
+name: mydepot
+channels:
+  - conda-forge
+  - defaults
+dependencies:
+  - numpy==1.8.1
+  - pandas==1.0.1
+  - pyyaml==0.2.2
+  - pip==20.0.2
+  - pip:
+    - yfinance==0.1.54
+    - --editable .
