@@ -7,11 +7,8 @@ import pandas as pd
 from .currency import Converter
 
 
-TARGET_CURRENCY = 'EUR'
-
-
 class Depot:
-    def __init__(self, name, trades, stock_corrections=None):
+    def __init__(self, name, trades, currency='EUR'):
         """The Depot
 
         name: string, name of the depot
@@ -25,6 +22,7 @@ class Depot:
         self.name = name
         self.trades = trades
         self.stock_corrections = stock_corrections
+        self.currency = currency
 
     @property
     def stocks(self):
@@ -89,7 +87,9 @@ class Depot:
         ))
 
 class Stock:
-    def __init__(self, symbol, amount=0, price=0, cost=0, fee_yearly=None):
+    def __init__(
+            self, symbol, amount=0, price=0, cost=0, fee_yearly=None currency='EUR'
+    ):
         """A single stock type"""
         self.symbol = str(symbol)
         self.amount = float(amount) # Sum of all trades
@@ -102,6 +102,7 @@ class Stock:
         self.info = self.ticker.info
         self.history = self.ticker.history(period="max")
         self.fee_yearly = fee_yearly
+        self.currency = currency
 
     @property
     def symbol(self):
@@ -117,9 +118,9 @@ class Stock:
         # get current value from Stockexchange
         #TODO: Transform to € if $
         value = self.history.iloc[-1]
-        if self.info['currency'] != TARGET_CURRENCY:
+        if self.info['currency'] != self.currency:
             currency = Converter(
-                self.info['currency'], TARGET_CURRENCY
+                self.info['currency'], self.currency
             )
             value = currency.convert(value)
 
@@ -198,4 +199,3 @@ class Trade:
         # Sign of transaction relative to Depot. Must be -1 or +1
         # TODO. Add a check here
         self.signum = signum
-
