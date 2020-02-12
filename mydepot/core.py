@@ -88,7 +88,7 @@ class Depot:
 
 class Stock:
     def __init__(
-            self, symbol, amount=0, price=0, cost=0, fee_yearly=None currency='EUR'
+            self, symbol, amount=0, price=0, cost=0, fee_yearly=None, currency='EUR'
     ):
         """A single stock type"""
         self.symbol = str(symbol)
@@ -113,7 +113,7 @@ class Stock:
         self._symbol = symbol
 
     @property
-    def value(self):
+    def value_current(self):
         """Return current value of the Stock."""
         # get current value from Stockexchange
         #TODO: Transform to € if $
@@ -154,13 +154,13 @@ class Stock:
             # Should this be based on amount or the hostry of value?
             # I could never find a clear explanation of it
             ret += trade.signum * trade.amount * days.days/365 * self.fee_yearly
-        ret *= self.value['Open']
+        ret *= self.value_current['Open']
         return ret
 
 
     @property
     def price_current(self):
-        return self.value['Open']*self.amount
+        return self.value_current['Open']*self.amount
 
     @property
     def performance(self):
@@ -195,7 +195,23 @@ class Trade:
         self.amount = float(amount)
         self.cost = float(cost)
         self.price = float(price)
-        self.date = date #datetime.datetime.strptime(date, '%Y-%m-%d')
+        self.date = datetime.date(date) #datetime.datetime.strptime(date, '%Y-%m-%d')
         # Sign of transaction relative to Depot. Must be -1 or +1
         # TODO. Add a check here
         self.signum = signum
+
+
+class SavingPlan():
+    def __ini__(self, symbol, start_date, stop_date, cost_execution, rate="monthly"):
+        self.symbol = str(symbol)
+        self.start_date = datetime.date(start_date)
+        self.stop_date = datetime.date(stop_date)
+        self.const_execution = float(cost_execution)
+        self.rate = rate# the rate at witch the plan is executed
+        self.ticker = yf.Ticker(self.symbol)
+        self.history = self.ticker.history(period=start_date)
+        self.info = self.ticker.info
+
+    @property
+    def trades(self):
+        """Construct list of trades from saving plan."""
