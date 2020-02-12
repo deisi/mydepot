@@ -21,7 +21,6 @@ class Depot:
 
         self.name = name
         self.trades = trades
-        self.stock_corrections = stock_corrections
         self.currency = currency
 
     @property
@@ -195,7 +194,7 @@ class Trade:
         self.amount = float(amount)
         self.cost = float(cost)
         self.price = float(price)
-        self.date = datetime.date(date) #datetime.datetime.strptime(date, '%Y-%m-%d')
+        self.date = date #datetime.datetime.strptime(date, '%Y-%m-%d')
         # Sign of transaction relative to Depot. Must be -1 or +1
         # TODO. Add a check here
         self.signum = signum
