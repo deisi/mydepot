@@ -1,6 +1,3 @@
-numpy
-pandas
-matplotlib
-alpha_vantage
-yfinance
-pyyaml
+yfinance==0.1.54
+lxml==4.5.0
+pyyaml==5.3
