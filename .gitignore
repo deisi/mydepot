@@ -106,3 +106,4 @@ ENV/
 
 # ignore private depot settings
 private/
+private
