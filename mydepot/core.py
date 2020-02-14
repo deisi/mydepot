@@ -3,6 +3,7 @@
 import datetime
 import yfinance as yf
 import pandas as pd
+import yaml
 
 from .currency import Converter
 
@@ -58,6 +59,13 @@ class Depot:
                 setattr(d.stocks[symbol], key, value)
         return d
 
+    def from_yaml(ffile):
+        with open(ffile) as file:
+            # The FullLoader parameter handles the conversion from YAML
+            # scalar values to Python the dictionary format
+            depot_config = yaml.load(file, Loader=yaml.FullLoader)
+            return Depot.from_dict(depot_config)
+
     @trades.setter
     def trades(self, trades):
         self._trades = []
@@ -84,6 +92,8 @@ class Depot:
             "Symbol", "Amount", "Price", "Price Current", "Performance",
             "Cost", "Cost Yearly",
         ))
+
+
 
 class Stock:
     def __init__(
