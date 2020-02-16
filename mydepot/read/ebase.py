@@ -3,13 +3,17 @@ from mydepot import Trade
 
 import datetime
 import pandas as pd
+import numpy as np
 
 def csv_to_df(*args, **kwargs):
     """Make pandas dataframe from raw ebase csv."""
 
-    return pd.read_csv(
+    df = pd.read_csv(
         *args, encoding = "ISO-8859-1", sep=';', decimal=',', **kwargs
     )
+    # Change Datum to np.datetime64
+    df['Datum'] = df['Datum'].apply(np.datetime64)
+    return df
 
 
 def csv_to_avg_trades(ffile):

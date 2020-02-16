@@ -1,6 +1,7 @@
 """Main Data and Object Classes"""
 
 import datetime
+import numpy as np
 import yfinance as yf
 import pandas as pd
 import yaml
@@ -9,7 +10,7 @@ from .currency import Converter
 
 
 class Depot:
-    def __init__(self, name, trades, currency='EUR'):
+    def __init__(self, name, trades, currency):
         """The Depot
 
         name: string, name of the depot
@@ -46,11 +47,25 @@ class Depot:
     def trades(self):
         return self._trades
 
+    @trades.setter
+    def trades(self, trades):
+        self._trades = []
+        if not isinstance(trades, list):
+            raise NotImplementedError
+        for trade in trades:
+            self._trades.append(Trade(**trade))
+
+    @property
+    def overview_trades(self):
+        ret = pd.DataFrame([trade.dict for trade in self.trades])
+        return ret
+
     def from_dict(depot_dict):
         """Generate depot from a configuration dict."""
         d = Depot(
             depot_dict['name'],
             depot_dict['trades'],
+            depot_dict['currency'],
         )
         for stock_dict in depot_dict['stocks']:
             # This pop in the original dict
@@ -66,14 +81,6 @@ class Depot:
             depot_config = yaml.load(file, Loader=yaml.FullLoader)
             return Depot.from_dict(depot_config)
 
-    @trades.setter
-    def trades(self, trades):
-        self._trades = []
-        if not isinstance(trades, list):
-            raise NotImplementedError
-        for trade in trades:
-            self._trades.append(Trade(**trade))
-
     @property
     def overview(self):
         """A pandas dataframe with overview information."""
@@ -86,11 +93,12 @@ class Depot:
                 round(stock.price_current, 2),
                 round(stock.performance*100-100 , 2),
                 round(stock.cost, 2),
-                round(stock.cost_yearly(), 2)
+                round(stock.cost_running(), 2),
+                round(stock.cost_yearly, 2),
             ])
         return pd.DataFrame(data, columns = (
             "Symbol", "Amount", "Price", "Price Current", "Performance",
-            "Cost", "Cost Yearly",
+            "Cost", "Total Running Costs", "Yearly Cost"
         ))
 
 
@@ -109,7 +117,7 @@ class Stock:
         self.trades = []
         # Buffers info and hist
         self.info = self.ticker.info
-        self.history = self.ticker.history(period="max")
+        self.history = self.ticker.history(period="3mo")
         self.fee_yearly = fee_yearly
         self.currency = currency
 
@@ -137,6 +145,7 @@ class Stock:
 
     @property
     def fee_yearly(self):
+        """The yearly fee of the Stock. (TER)"""
         return self._fee_yearly
 
     @fee_yearly.setter
@@ -150,8 +159,8 @@ class Stock:
         return self._fee_yearly
 
 
-    def cost_yearly(self, time=datetime.date.today()):
-        """Return yearly cost.
+    def cost_running(self, time=datetime.date.today()):
+        """Return running costs.
 
         time: datetime.date, time untill the fee is payed.
             Default is today.
@@ -166,14 +175,35 @@ class Stock:
         ret *= self.value_current['Open']
         return ret
 
+    @property
+    def cost_yearly(self):
+        """Calculate the yearly cost."""
+        return self.price_current * self.fee_yearly
+
 
     @property
     def price_current(self):
+        """The current proce of all pieces."""
         return self.value_current['Open']*self.amount
 
     @property
     def performance(self):
+        """The relative value gain of the stock."""
         return self.price_current/self.price
+
+    @property
+    def overview_trades(self):
+        df = pd.DataFrame([trade.dict for trade in self.trades])
+        # Recast date ti np.datetime64 because this works best with altair
+        df['date'] = df['date'].apply(np.datetime64)
+        # Because there is only day resolution, combine all trades of one
+        # day, as altair gets intro trouble else.
+        df = df.groupby('date').sum().reset_index()
+        df['value_per_piece'] = df['price']/df['amount']
+        df['total_cost'] = np.cumsum(df['cost'] + df['price'])
+        df['total_amount'] = df['amount'].cumsum()
+        df['total_value'] = df['total_amount'] * df['value_per_piece']
+        return df
 
     def from_trade(trade):
         """Generate Stock object from trade."""
@@ -210,17 +240,13 @@ class Trade:
         self.signum = signum
 
 
-class SavingPlan():
-    def __ini__(self, symbol, start_date, stop_date, cost_execution, rate="monthly"):
-        self.symbol = str(symbol)
-        self.start_date = datetime.date(start_date)
-        self.stop_date = datetime.date(stop_date)
-        self.const_execution = float(cost_execution)
-        self.rate = rate# the rate at witch the plan is executed
-        self.ticker = yf.Ticker(self.symbol)
-        self.history = self.ticker.history(period=start_date)
-        self.info = self.ticker.info
-
     @property
-    def trades(self):
-        """Construct list of trades from saving plan."""
+    def dict(self):
+        return {
+            'symbol': self.symbol,
+            'date': self.date,
+            'amount': self.amount,
+            'price': self.price,
+            'cost': self.cost,
+            'signum': self.signum,
+        }
