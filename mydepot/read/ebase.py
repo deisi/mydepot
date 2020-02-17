@@ -5,6 +5,11 @@ import datetime
 import pandas as pd
 import numpy as np
 
+isintosymbol = {
+    'AT0000973029': 'AT0000973029.VI',
+    'DE000A0MQR01': '0P0000A1W7.F',
+}
+
 def csv_to_df(*args, **kwargs):
     """Make pandas dataframe from raw ebase csv."""
 
@@ -23,17 +28,12 @@ def csv_to_avg_trades(ffile):
     """
     df = csv_to_df(ffile)
 
-    fonts = df.groupby('ISIN').sum()
-    #fonts[[
-    #    'Zahlungsbetrag in ZW',
-    #    'Anteile',
-    #    'Anlagebetrag in ZW',
-    #    'Vertriebsprovision in ZW (im Abrechnungskurs enthalten)',
-    #    'Barausschüttung/Steuerliquidität in ZW',
-    #    'Steuern in EUR'
-    #]]
+    fonts = df.groupby(['ISIN', 'Umsatzart']).sum()
     trades = []
     for isin, font in fonts.iterrows():
+        symbol = isintosymbol.get(isin)
+        if not symbol:
+            continue
         trades.append(Trade(
             symbol = isin,
             price = font['Zahlungsbetrag in ZW'] - font['Vertriebsprovision in ZW (im Abrechnungskurs enthalten)'],
@@ -42,3 +42,27 @@ def csv_to_avg_trades(ffile):
             date = datetime.date.today(),
         ))
     return trades
+
+
+def csv_to_trades(ffile, umsatzart='Ansparplan'):
+    """Get trades from ebase csv file."""
+
+    df = csv_to_df(ffile)
+    trades = []
+    for index, row in df.iterrows():
+        if row['Umsatzart'] != umsatzart:
+            continue
+        symbol = isintosymbol.get(row['ISIN'])
+        if not symbol:
+            continue
+        cost = row['Vertriebsprovision in ZW (im Abrechnungskurs enthalten)']
+        price = row['Anlagebetrag in ZW'] - cost
+        trades.append(Trade(
+            symbol=symbol,
+            amount=row['Anteile'],
+            cost=cost,
+            price=price,
+            date=row['Datum']
+        ))
+    return trades
+

@@ -15,11 +15,9 @@ class Depot:
 
         name: string, name of the depot
         trades: list of dicts with trades.
-        stock_corrections: Some properties are not correctly pulled
-          by yahoofinance. Here they can be overwritten.
-
         """
         self._stocks = {}
+        self._trades = []
 
         self.name = name
         self.trades = trades
@@ -50,6 +48,7 @@ class Depot:
     @trades.setter
     def trades(self, trades):
         self._trades = []
+        self._stocks = {}
         if not isinstance(trades, list):
             raise NotImplementedError
         for trade in trades:
@@ -238,6 +237,17 @@ class Trade:
         # Sign of transaction relative to Depot. Must be -1 or +1
         # TODO. Add a check here
         self.signum = signum
+
+    @property
+    def dict(self):
+        return {
+            'symbol': self.symbol,
+            'amount': self.amount,
+            'cost': self.cost,
+            'price': self.price,
+            'date': self.date,
+            'signum': self.signum,
+        }
 
 
     @property
