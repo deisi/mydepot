@@ -1,5 +1,5 @@
 yfinance==0.1.54
-lxml==4.5.0
+lxml==4.6.2
 pyyaml==5.3
 pandas==1.0.1
 fints==3.0.0
